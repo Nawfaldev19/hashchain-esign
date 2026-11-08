@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+playwright-report
+test-results
+.data
+package-lock.json
+src/web/graphql/graphql-env.d.ts
+schema.graphql
