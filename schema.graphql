@@ -1,0 +1,327 @@
+type Answer {
+  fieldId: ID!
+  value: String!
+}
+
+input AnswerInput {
+  fieldId: ID!
+  value: String!
+}
+
+type CreatedRequest {
+  links: [SignerLink!]!
+  request: SigningRequest!
+}
+
+"""A moment in time as an ISO 8601 string in UTC."""
+scalar DateTime
+
+input DraftInput {
+  description: String!
+
+  """The draftRevision the edit started from. A mismatch is a CONFLICT."""
+  expectedRevision: Int!
+  fields: [FieldInput!]!
+  title: String!
+}
+
+type Field {
+  assignedTo: ID
+  body: String
+  id: ID!
+  kind: FieldKind!
+  label: String!
+  options: [String!]!
+  required: Boolean!
+}
+
+input FieldInput {
+  assignedTo: ID
+  body: String
+  id: ID!
+  kind: FieldKind!
+  label: String!
+  options: [String!]!
+  required: Boolean!
+}
+
+type FieldIssue {
+  fieldId: ID
+  message: String!
+}
+
+enum FieldKind {
+  CHECKBOX
+  CHOICE
+  DATE
+  HEADING
+  LONG_TEXT
+  PARAGRAPH
+  SIGNATURE
+  TEXT
+}
+
+"""The result of re-computing the hash chain of a request."""
+type HistoryCheck {
+  checkedEvents: Int!
+  intact: Boolean!
+  problem: String
+}
+
+type Member {
+  email: String!
+  id: ID!
+  name: String!
+  role: Role!
+}
+
+type Membership {
+  role: Role!
+  workspace: WorkspaceSummary!
+}
+
+type Mutation {
+  createSigningRequest(input: NewRequestInput!, workspaceId: ID!): CreatedRequest!
+  createTemplate(description: String!, title: String!, workspaceId: ID!): Template!
+  login(email: String!, password: String!): Viewer!
+  logout: Boolean!
+  publishTemplate(templateId: ID!, workspaceId: ID!): TemplateVersion!
+
+  """Public. Notes the first time a signer opens their link."""
+  recordSigningView(token: String!): Boolean!
+  reissueSignerLink(signerId: ID!, workspaceId: ID!): SignerLink!
+  revokeSigningRequest(requestId: ID!, workspaceId: ID!): SigningRequest!
+  saveTemplateDraft(input: DraftInput!, templateId: ID!, workspaceId: ID!): Template!
+
+  """Public. Submits the answers and signature of the link holder."""
+  submitSignature(input: SubmissionInput!, token: String!): SigningState!
+  updateWorkspaceBranding(accentColor: String!, name: String!, workspaceId: ID!): Workspace!
+}
+
+input NewRequestInput {
+  expiresInDays: Int!
+  message: String!
+  signers: [SignerInput!]!
+  templateVersionId: ID!
+  title: String!
+}
+
+type Point {
+  x: Float!
+  y: Float!
+}
+
+input PointInput {
+  x: Float!
+  y: Float!
+}
+
+type Query {
+  """Public. Opens the document behind a signing link."""
+  signingSession(token: String!): SigningSession!
+
+  """The signed-in user, or null when nobody is signed in."""
+  viewer: Viewer
+
+  """A workspace the signed-in user is a member of."""
+  workspace(id: ID!): Workspace!
+}
+
+type RequestEvent {
+  actorName: String!
+  hash: String!
+  kind: String!
+  occurredAt: DateTime!
+  seq: Int!
+}
+
+type RequestPage {
+  endCursor: String
+  hasNextPage: Boolean!
+  items: [SigningRequest!]!
+}
+
+enum RequestStatus {
+  AWAITING
+  COMPLETED
+  EXPIRED
+  PARTLY_SIGNED
+  REVOKED
+}
+
+enum Role {
+  EDITOR
+  OWNER
+  VIEWER
+}
+
+type Signature {
+  kind: SignatureKind!
+  strokes: [Stroke!]!
+  text: String
+}
+
+input SignatureInput {
+  kind: SignatureKind!
+  strokes: [StrokeInput!]
+  text: String
+}
+
+enum SignatureKind {
+  DRAWN
+  TYPED
+}
+
+type Signer {
+  answers: [Answer!]!
+  blockId: ID!
+  email: String!
+  id: ID!
+  label: String!
+  name: String!
+  signature: Signature
+  signedAt: DateTime
+  viewedAt: DateTime
+}
+
+input SignerInput {
+  blockId: ID!
+  email: String!
+  name: String!
+}
+
+"""A private signing link. It is shown once; only its hash is stored."""
+type SignerLink {
+  label: String!
+  name: String!
+  signerId: ID!
+  url: String!
+}
+
+type SigningParty {
+  blockId: ID!
+  isYou: Boolean!
+  label: String!
+  name: String!
+  signature: Signature
+  signedAt: DateTime
+}
+
+type SigningRequest {
+  completedAt: DateTime
+  createdAt: DateTime!
+  events: [RequestEvent!]!
+  expiresAt: DateTime!
+  historyCheck: HistoryCheck!
+  id: ID!
+  message: String!
+  pdfUrl: String!
+  revokedAt: DateTime
+  signedCount: Int!
+  signerCount: Int!
+  signers: [Signer!]!
+  status: RequestStatus!
+  title: String!
+  version: TemplateVersion!
+}
+
+"""What the holder of a signing link may see. No account is involved."""
+type SigningSession {
+  accentColor: String!
+  answers: [Answer!]!
+  documentDescription: String!
+  documentTitle: String!
+  expiresAt: DateTime!
+  fields: [Field!]!
+  message: String!
+  parties: [SigningParty!]!
+  requestTitle: String!
+  state: SigningState!
+  versionNumber: Int!
+  workspaceName: String!
+  yourBlockId: ID!
+}
+
+enum SigningState {
+  COMPLETED
+  EXPIRED
+  OPEN
+  REVOKED
+  SIGNED
+}
+
+"""One continuous pen movement of a drawn signature."""
+type Stroke {
+  points: [Point!]!
+}
+
+input StrokeInput {
+  points: [PointInput!]!
+}
+
+input SubmissionInput {
+  answers: [AnswerInput!]!
+  signature: SignatureInput!
+}
+
+type Template {
+  createdAt: DateTime!
+  description: String!
+  draftFields: [Field!]!
+  draftRevision: Int!
+  hasUnpublishedChanges: Boolean!
+  id: ID!
+  latestVersion: TemplateVersion
+
+  """What still stops the draft from being published. Empty when ready."""
+  publishIssues: [FieldIssue!]!
+  title: String!
+  updatedAt: DateTime!
+  versions: [TemplateVersion!]!
+}
+
+type TemplatePage {
+  endCursor: String
+  hasNextPage: Boolean!
+  items: [Template!]!
+}
+
+"""A published, unchangeable snapshot of a template."""
+type TemplateVersion {
+  description: String!
+  fields: [Field!]!
+  id: ID!
+  number: Int!
+  publishedAt: DateTime!
+  signatureBlocks: [Field!]!
+  title: String!
+}
+
+"""The signed-in user."""
+type Viewer {
+  email: String!
+  id: ID!
+  memberships: [Membership!]!
+  name: String!
+}
+
+"""One tenant. Everything below it belongs to this workspace only."""
+type Workspace {
+  accentColor: String!
+  id: ID!
+  members: [Member!]!
+  name: String!
+  request(id: ID!): SigningRequest!
+  requests(after: String, first: Int, status: RequestStatus): RequestPage!
+
+  """The role of the signed-in user in this workspace."""
+  role: Role!
+  template(id: ID!): Template!
+  templates(after: String, first: Int): TemplatePage!
+}
+
+type WorkspaceSummary {
+  accentColor: String!
+  id: ID!
+  name: String!
+}
