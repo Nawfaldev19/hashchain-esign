@@ -114,6 +114,8 @@ test('write, publish, send, sign twice, verify and download', async ({ page, bro
     const context = await browser.newContext();
     const signer = await context.newPage();
     await signer.goto(pathOf(links[1] ?? ''));
+    // Wait for the form to render so the checkbox check below does not race the page load.
+    await expect(signer.getByRole('button', { name: 'Sign document' })).toBeVisible();
     const checkbox = signer.getByLabel(/I will never open a hot kiln/);
     if (await checkbox.isVisible()) await checkbox.check();
 
